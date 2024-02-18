@@ -1,9 +1,18 @@
 # WaitingBusBatch
 
 #### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+**内存“攒批工具”** waiting-bus-batch 是一个能够支持在内存中进行多分批延迟处理的工具。
+适用于需要将上游（例如消费MQ消息）投递的消息进行攒批，达到设定规则之后再去调用下游业务或者再开启消息处理的场景。
+该攒批工具具有如下优点：
+- 使用简单，配置项少，线程安全
+- 支持多批次同时攒批
+- 支持设定内存上限，可有效避免JVM内存问题
+- 支持设定内存红线、时间红线、数量红线三种规则，达到红线后会自动启动消息处理逻辑
+- 支持重试逻辑
+- 回调能力丰富，成功、失败都有对应的回调接口可供实现
+- 提供可观测的API，可以了解当前攒批任务的各项指标
+
+
 
 #### 软件架构
 软件架构说明
@@ -11,7 +20,7 @@ Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN�
 
 #### 安装教程
 
-1.  xxxx
+1.  clone代码
 2.  xxxx
 3.  xxxx
 
@@ -28,12 +37,3 @@ Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN�
 3.  提交代码
 4.  新建 Pull Request
 
-
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
