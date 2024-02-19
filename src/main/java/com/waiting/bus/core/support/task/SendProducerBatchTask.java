@@ -96,7 +96,7 @@ public class SendProducerBatchTask implements Runnable {
             long retryBackoffMs = calculateRetryBackoffMs();
             batch.setNextRetryMs(System.currentTimeMillis() + retryBackoffMs);
             retryQueue.put(batch);
-            LOGGER.info("retry batch, batchId={}, retryCount={}", batch.getBatchId(), batch.getRetries());
+            LOGGER.info("retry batch, batchId={}, retryCount={}", batch.getGroupName(), batch.getRetries());
         } else {
             failureQueue.put(batch);
         }

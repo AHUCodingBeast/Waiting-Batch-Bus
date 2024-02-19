@@ -47,16 +47,20 @@ public class ProducerBatchContainer {
 
     private final IOThreadPool ioThreadPool;
 
+    // 当前内存总计有多少攒批
     private final AtomicInteger batchCount;
 
     private final ConcurrentMap<String, ProducerBatchHolder> batches;
 
 
-    public ProducerBatchContainer(ProducerConfig producerConfig, Function<List<Message>, MessageProcessResultEnum> messageProcessFunction, Semaphore semaphore,
+    public ProducerBatchContainer(ProducerConfig producerConfig,
+                                  Function<List<Message>, MessageProcessResultEnum> messageProcessFunction,
+                                  Semaphore semaphore,
                                   RetryQueue retryQueue,
                                   BlockingQueue<ProducerBatch> successQueue,
                                   BlockingQueue<ProducerBatch> failureQueue,
-                                  IOThreadPool ioThreadPool, AtomicInteger batchCount) {
+                                  IOThreadPool ioThreadPool,
+                                  AtomicInteger batchCount) {
         this.producerConfig = producerConfig;
         this.messageProcessFunction = messageProcessFunction;
         this.semaphore = semaphore;
@@ -71,92 +75,21 @@ public class ProducerBatchContainer {
     }
 
 
-    public ListenableFuture<Result> append(List<Message> items, Callback callback, String batchId)
-            throws InterruptedException, ProducerException {
+    public ListenableFuture<Result> append(List<Message> items, Callback callback, String groupName) throws InterruptedException, ProducerException {
         appendsInProgress.incrementAndGet();
         try {
-            return doAppend(items, callback, batchId);
+            return doAppend(items, callback, groupName);
         } finally {
             appendsInProgress.decrementAndGet();
         }
     }
 
-
-    private ListenableFuture<Result> doAppend(List<Message> messageList, Callback callback, String batchId) throws InterruptedException, ProducerException {
-        if (closed) {
-            throw new IllegalStateException("cannot append after the waitingBus container was closed");
-        }
-
-        int sizeInBytes = DataSizeCalculator.calculateMessageByteSize(messageList);
-        ensureSize(sizeInBytes);
-
-        long maxBlockMs = producerConfig.getMaxBlockMs();
-        if (maxBlockMs >= 0) {
-            boolean acquired = semaphore.tryAcquire(sizeInBytes, maxBlockMs, TimeUnit.MILLISECONDS);
-            if (!acquired) {
-                throw new TimeoutException("failed to acquire memory within the configured max blocking time " + producerConfig.getMaxBlockMs() + " ms");
-            }
-        } else {
-            semaphore.acquire(sizeInBytes);
-        }
-
+    public void append(List<Message> items, String groupName) throws InterruptedException, ProducerException {
+        appendsInProgress.incrementAndGet();
         try {
-            ProducerBatchHolder holder = getOrCreateProducerBatchHolder(batchId);
-            synchronized (holder) {
-                return appendToHolder(batchId, messageList, callback, sizeInBytes, holder);
-            }
-        } catch (Exception e) {
-            semaphore.release(sizeInBytes);
-            throw new ProducerException(e);
-        }
-    }
-
-
-    private ProducerBatchHolder getOrCreateProducerBatchHolder(String batchId) {
-        ProducerBatchHolder holder = batches.get(batchId);
-        if (holder != null) {
-            return holder;
-        }
-        holder = new ProducerBatchHolder();
-        ProducerBatchHolder previous = batches.putIfAbsent(batchId, holder);
-        if (previous == null) {
-            return holder;
-        } else {
-            return previous;
-        }
-    }
-
-    private synchronized ListenableFuture<Result> appendToHolder(String batchId, List<Message> messages,
-                                                                 Callback callback, int sizeInBytes, ProducerBatchHolder holder) {
-        if (holder.producerBatch != null) {
-            ListenableFuture<Result> f = holder.producerBatch.tryAppend(messages, sizeInBytes, callback);
-            if (f != null) {
-                if (holder.producerBatch.isMeetSendCondition()) {
-                    holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
-                }
-                return f;
-            } else {
-                holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
-            }
-        }
-        holder.producerBatch = new ProducerBatch(producerConfig.getBatchSizeThresholdInBytes(),
-                producerConfig.getBatchCountThreshold(), producerConfig.getMaxReservedAttempts(), batchId);
-        ListenableFuture<Result> f = holder.producerBatch.tryAppend(messages, sizeInBytes, callback);
-        batchCount.incrementAndGet();
-        if (holder.producerBatch.isMeetSendCondition()) {
-            holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
-        }
-        return f;
-    }
-
-
-    private void ensureSize(int sizeInBytes) {
-        if (sizeInBytes > ProducerConfig.MAX_BATCH_SIZE_IN_BYTES) {
-            throw new RuntimeException("the messageList is " + sizeInBytes + " bytes which is larger than MAX_BATCH_SIZE_IN_BYTES " +
-                    ProducerConfig.MAX_BATCH_SIZE_IN_BYTES);
-        }
-        if (sizeInBytes > producerConfig.getTotalSizeInBytes()) {
-            throw new RuntimeException("the messageList is " + sizeInBytes + " bytes which is larger than the totalSizeInBytes you specified");
+            doAppend(items, groupName);
+        } finally {
+            appendsInProgress.decrementAndGet();
         }
     }
 
@@ -183,7 +116,7 @@ public class ProducerBatchContainer {
                     continue;
                 }
                 long curRemainingMs = holder.producerBatch.remainingMs(nowMs, producerConfig.getLingerMs());
-                LOGGER.warn("batchId={} remainingMs={} createTime={}", holder.producerBatch.getBatchId(), curRemainingMs, holder.producerBatch.getCreatedMs());
+                LOGGER.warn("groupName={} remainingMs={} createTime={}", holder.producerBatch.getGroupName(), curRemainingMs, holder.producerBatch.getCreatedMs());
                 if (curRemainingMs <= 0) {
                     expireBatches.add(holder.producerBatch);
                     holder.producerBatch = null;
@@ -191,6 +124,134 @@ public class ProducerBatchContainer {
             }
         }
         return expireBatches;
+    }
+
+
+    private ListenableFuture<Result> doAppend(List<Message> messageList, Callback callback, String groupName) throws InterruptedException, ProducerException {
+        if (closed) {
+            throw new IllegalStateException("cannot append after the waitingBus container was closed");
+        }
+
+        int sizeInBytes = DataSizeCalculator.calculateMessageByteSize(messageList);
+        ensureSize(sizeInBytes);
+
+        long maxBlockMs = producerConfig.getMaxBlockMs();
+        if (maxBlockMs >= 0) {
+            boolean acquired = semaphore.tryAcquire(sizeInBytes, maxBlockMs, TimeUnit.MILLISECONDS);
+            if (!acquired) {
+                throw new TimeoutException("failed to acquire memory within the configured max blocking time " + producerConfig.getMaxBlockMs() + " ms");
+            }
+        } else {
+            semaphore.acquire(sizeInBytes);
+        }
+
+        try {
+            ProducerBatchHolder holder = getOrCreateProducerBatchHolder(groupName);
+            synchronized (holder) {
+                return appendToHolder(groupName, messageList, callback, sizeInBytes, holder);
+            }
+        } catch (Exception e) {
+            semaphore.release(sizeInBytes);
+            throw new ProducerException(e);
+        }
+    }
+
+    private void doAppend(List<Message> messageList, String groupName) throws InterruptedException, ProducerException {
+        if (closed) {
+            throw new IllegalStateException("cannot append after the waitingBus container was closed");
+        }
+
+        int sizeInBytes = DataSizeCalculator.calculateMessageByteSize(messageList);
+        ensureSize(sizeInBytes);
+
+        long maxBlockMs = producerConfig.getMaxBlockMs();
+        if (maxBlockMs >= 0) {
+            boolean acquired = semaphore.tryAcquire(sizeInBytes, maxBlockMs, TimeUnit.MILLISECONDS);
+            if (!acquired) {
+                throw new TimeoutException("failed to acquire memory within the configured max blocking time " + producerConfig.getMaxBlockMs() + " ms");
+            }
+        } else {
+            semaphore.acquire(sizeInBytes);
+        }
+
+        try {
+            ProducerBatchHolder holder = getOrCreateProducerBatchHolder(groupName);
+            synchronized (holder) {
+                appendToHolder(groupName, messageList, sizeInBytes, holder);
+            }
+        } catch (Exception e) {
+            semaphore.release(sizeInBytes);
+            throw new ProducerException(e);
+        }
+    }
+
+
+    private ProducerBatchHolder getOrCreateProducerBatchHolder(String groupName) {
+        ProducerBatchHolder holder = batches.get(groupName);
+        if (holder != null) {
+            return holder;
+        }
+        holder = new ProducerBatchHolder();
+        ProducerBatchHolder previous = batches.putIfAbsent(groupName, holder);
+        if (previous == null) {
+            return holder;
+        } else {
+            return previous;
+        }
+    }
+
+    private synchronized ListenableFuture<Result> appendToHolder(String groupName, List<Message> messages, Callback callback, int sizeInBytes, ProducerBatchHolder holder) {
+        if (holder.producerBatch != null) {
+            ListenableFuture<Result> f = holder.producerBatch.tryAppend(messages, sizeInBytes, callback);
+            if (f != null) {
+                if (holder.producerBatch.isMeetSendCondition()) {
+                    holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
+                }
+                return f;
+            } else {
+                holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
+            }
+        }
+        holder.producerBatch = new ProducerBatch(producerConfig.getBatchSizeThresholdInBytes(), producerConfig.getBatchCountThreshold(), producerConfig.getMaxReservedAttempts(), groupName);
+        LOGGER.info("groupName={} has created a new batch  batchId={}", groupName, holder.producerBatch.getBatchId());
+        ListenableFuture<Result> f = holder.producerBatch.tryAppend(messages, sizeInBytes, callback);
+        batchCount.incrementAndGet();
+        if (holder.producerBatch.isMeetSendCondition()) {
+            holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
+        }
+        return f;
+    }
+
+
+    private synchronized void appendToHolder(String groupName, List<Message> messages, int sizeInBytes, ProducerBatchHolder holder) {
+        if (holder.producerBatch != null) {
+            boolean appendResult = holder.producerBatch.tryAppend(messages, sizeInBytes);
+            if (appendResult) {
+                if (holder.producerBatch.isMeetSendCondition()) {
+                    holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
+                }
+            } else {
+                holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
+            }
+        }
+        holder.producerBatch = new ProducerBatch(producerConfig.getBatchSizeThresholdInBytes(), producerConfig.getBatchCountThreshold(), producerConfig.getMaxReservedAttempts(), groupName);
+        LOGGER.info("groupName={} has created a new batch  batchId={}", groupName, holder.producerBatch.getBatchId());
+        holder.producerBatch.tryAppend(messages, sizeInBytes);
+        batchCount.incrementAndGet();
+        if (holder.producerBatch.isMeetSendCondition()) {
+            holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
+        }
+    }
+
+
+    private void ensureSize(int sizeInBytes) {
+        if (sizeInBytes > ProducerConfig.MAX_BATCH_SIZE_IN_BYTES) {
+            throw new RuntimeException("the messageList is " + sizeInBytes + " bytes which is larger than MAX_BATCH_SIZE_IN_BYTES " +
+                    ProducerConfig.MAX_BATCH_SIZE_IN_BYTES);
+        }
+        if (sizeInBytes > producerConfig.getTotalSizeInBytes()) {
+            throw new RuntimeException("the messageList is " + sizeInBytes + " bytes which is larger than the totalSizeInBytes you specified");
+        }
     }
 
 

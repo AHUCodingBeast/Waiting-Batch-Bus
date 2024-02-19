@@ -61,6 +61,8 @@ public class MessageProducer {
 
     private static final String COMPONENT_NAME = "WaitingBus";
 
+    public static final String DEFAULT_GROUP_NAME = "WAITING-BUS-DEFAULT-GROUP";
+
 
     public MessageProducer(ProducerConfig producerConfig, Function<List<Message>, MessageProcessResultEnum> messageProcessFunction) {
 
@@ -86,14 +88,25 @@ public class MessageProducer {
     }
 
 
-    public ListenableFuture<Result> send(String batchId, List<Message> messageList, Callback callback) throws InterruptedException, ProducerException {
+    public ListenableFuture<Result> send(String groupName, List<Message> messageList, Callback callback) throws InterruptedException, ProducerException {
 
         messageList.forEach(message -> {
-            message.setBatchId(batchId);
+            message.setBatchId(groupName);
         });
 
-        return producerBatchContainer.append(messageList, callback, batchId);
+        return producerBatchContainer.append(messageList, callback, groupName);
     }
+
+    public void send(String groupName, List<Message> messageList) throws InterruptedException, ProducerException {
+        if (groupName == null || groupName.isEmpty()) {
+            groupName = DEFAULT_GROUP_NAME;
+        }
+        for (Message message : messageList) {
+            message.setBatchId(groupName);
+        }
+        producerBatchContainer.append(messageList, groupName);
+    }
+
 
     public void close() throws InterruptedException, ProducerException {
         close((long) Integer.MAX_VALUE);
@@ -101,7 +114,7 @@ public class MessageProducer {
 
     public void close(Long timeoutMs) throws InterruptedException, ProducerException {
         long remainTimeoutMs = timeoutMs;
-        remainTimeoutMs = closeExpireBatchHandler(timeoutMs);
+        remainTimeoutMs = closeExpireBatchHandler(remainTimeoutMs);
         remainTimeoutMs = closeIOThreadPool(remainTimeoutMs);
         remainTimeoutMs = closeSuccessBatchHandler(remainTimeoutMs);
         remainTimeoutMs = closeFailureBatchHandler(remainTimeoutMs);

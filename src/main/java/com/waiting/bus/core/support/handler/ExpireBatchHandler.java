@@ -71,24 +71,18 @@ public class ExpireBatchHandler extends Thread {
     private void loopHandleExpireBatch() {
         while (!closed) {
             try {
-                handleExpireBatch();
+                List<ProducerBatch> expiredBatches1 = producerBatchContainer.getExpiredBatches();
+                List<ProducerBatch> expiredBatches2 = retryQueue.getExpiredBatches(1000);
+                expiredBatches1.addAll(expiredBatches2);
+                for (ProducerBatch b : expiredBatches1) {
+                    ioThreadPool.submit(new SendProducerBatchTask(b, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue));
+                }
             } catch (Exception e) {
                 LOGGER.error("loopHandleExpireBatch Exception, e=", e);
             }
         }
     }
 
-    private void handleExpireBatch() {
-        List<ProducerBatch> expiredBatches1 = producerBatchContainer.getExpiredBatches();
-
-        List<ProducerBatch> expiredBatches2 = retryQueue.getExpiredBatches(1000);
-        LOGGER.warn("");
-
-        expiredBatches1.addAll(expiredBatches2);
-        for (ProducerBatch b : expiredBatches1) {
-            ioThreadPool.submit(new SendProducerBatchTask(b, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue));
-        }
-    }
 
     private void submitIncompleteBatches() {
         List<ProducerBatch> incompleteBatches = producerBatchContainer.getRemainingBatches();

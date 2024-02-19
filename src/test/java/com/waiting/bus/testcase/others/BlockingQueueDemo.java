@@ -1,7 +1,5 @@
 package com.waiting.bus.testcase.others;
 
-import com.waiting.bus.core.containers.ProducerBatch;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 

@@ -59,9 +59,9 @@ public class BatchHandler extends Thread {
     private void handle(ProducerBatch batch) {
         try {
             batch.fireCallbacksAndSetFutures();
-            LOGGER.info("batch={} has callBack successfully!", batch.getBatchId());
+            LOGGER.info("batch={} batchGroupName={} has execute callBack successfully!", batch.getBatchId(), batch.getGroupName());
         } catch (Throwable t) {
-            LOGGER.error("Failed to handle batch, batch={}, e=", batch, t);
+            LOGGER.error("Failed to handle batch, batchId={} batchGroupName={}, e=", batch.getBatchId(), batch.getGroupName(), t);
         } finally {
             batchCount.decrementAndGet();
             memoryController.release(batch.getCurBatchSizeInBytes());

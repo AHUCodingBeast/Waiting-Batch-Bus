@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
@@ -47,9 +48,20 @@ public class ProducerBatch implements Delayed {
 
     private long nextRetryMs;
 
+
+    private String groupName;
+
     private String batchId;
 
-    public ProducerBatch(int batchSizeThresholdInBytes, int batchCountThreshold, int maxReservedAttempts, String batchId) {
+    /**
+     * 构建一个攒批
+     *
+     * @param batchSizeThresholdInBytes 这个批次占据的最大内存
+     * @param batchCountThreshold       这个批次最多持有的消息上限
+     * @param maxReservedAttempts       这个批次最多拥有的重试次数
+     * @param groupName                 当前攒批所属的组名称
+     */
+    public ProducerBatch(int batchSizeThresholdInBytes, int batchCountThreshold, int maxReservedAttempts, String groupName) {
         this.createdMs = System.currentTimeMillis();
         this.batchSizeThresholdInBytes = batchSizeThresholdInBytes;
         this.batchCountThreshold = batchCountThreshold;
@@ -57,9 +69,18 @@ public class ProducerBatch implements Delayed {
         this.curBatchSizeInBytes = 0;
         this.reservedAttempts = EvictingQueue.create(maxReservedAttempts);
         this.attemptCount = 0;
-        this.batchId = batchId;
+        this.groupName = groupName;
+        this.batchId = this.groupName + "_" + System.currentTimeMillis() + "_" + new Random().nextInt(1000);
     }
 
+    /**
+     * 往当前攒批中继续添加消息
+     *
+     * @param items       需要添加的消息
+     * @param sizeInBytes 消息占据的内存
+     * @param callback    当前追加的数据的执行回调
+     * @return 这批追加的消息的处理结果
+     */
     public ListenableFuture<Result> tryAppend(List<Message> items, int sizeInBytes, Callback callback) {
         if (!hasRoomFor(sizeInBytes, items.size())) {
             return null;
@@ -71,6 +92,22 @@ public class ProducerBatch implements Delayed {
             curBatchSizeInBytes += sizeInBytes;
             return future;
         }
+    }
+
+    /**
+     * 往当前攒批中继续添加消息 (不回调) 不关心结果返回
+     *
+     * @param items       需要添加的消息
+     * @param sizeInBytes 消息占据的内存
+     * @return 是否成功
+     */
+    public boolean tryAppend(List<Message> items, int sizeInBytes) {
+        if (hasRoomFor(sizeInBytes, items.size())) {
+            curBatchCount += items.size();
+            curBatchSizeInBytes += sizeInBytes;
+            return true;
+        }
+        return false;
     }
 
 
@@ -93,7 +130,7 @@ public class ProducerBatch implements Delayed {
                     thunk.callback.onCompletion(result);
                 }
             } catch (Exception e) {
-                LOGGER.error("Failed to execute user-provided callback, batchId={}, e=", batchId, e);
+                LOGGER.error("Failed to execute user-provided callback, groupName={}, e=", groupName, e);
             }
         }
     }
@@ -107,7 +144,7 @@ public class ProducerBatch implements Delayed {
                     thunk.future.setException(new ResultFailedException(result));
                 }
             } catch (Exception e) {
-                LOGGER.error("Failed to set future, batchId={}, e=", batchId, e);
+                LOGGER.error("Failed to set future, groupName={}, e=", groupName, e);
             }
         }
     }
@@ -162,11 +199,14 @@ public class ProducerBatch implements Delayed {
         return createdMs;
     }
 
-    public void setBatchId(String batchId) {
-        this.batchId = batchId;
+
+    public String getGroupName() {
+        return groupName;
     }
 
     public String getBatchId() {
         return batchId;
     }
+
+
 }
