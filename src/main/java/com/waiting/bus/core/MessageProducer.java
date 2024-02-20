@@ -64,6 +64,12 @@ public class MessageProducer {
     public static final String DEFAULT_GROUP_NAME = "WAITING-BUS-DEFAULT-GROUP";
 
 
+    /**
+     * 核心构造器
+     *
+     * @param producerConfig         生产者配置也就是攒批配置
+     * @param messageProcessFunction 消息处理函数，由攒批控制器来在合适的时机进行调用
+     */
     public MessageProducer(ProducerConfig producerConfig, Function<List<Message>, MessageProcessResultEnum> messageProcessFunction) {
 
         BlockingQueue<ProducerBatch> successQueue = new LinkedBlockingQueue<>();
@@ -88,21 +94,39 @@ public class MessageProducer {
     }
 
 
+    /**
+     * 向攒批队列中追加消息
+     *
+     * @param groupName   攒批队列分组名
+     * @param messageList 消息列表
+     * @param callback    回调
+     * @return ListenableFuture
+     * @throws InterruptedException
+     * @throws ProducerException
+     */
     public ListenableFuture<Result> send(String groupName, List<Message> messageList, Callback callback) throws InterruptedException, ProducerException {
 
         messageList.forEach(message -> {
-            message.setBatchId(groupName);
+            message.setGroupName(groupName);
         });
 
         return producerBatchContainer.append(messageList, callback, groupName);
     }
 
+    /**
+     * 向攒批队列中追加消息,无回调设计
+     *
+     * @param groupName   攒批队列分组名
+     * @param messageList 消息列表
+     * @throws InterruptedException
+     * @throws ProducerException
+     */
     public void send(String groupName, List<Message> messageList) throws InterruptedException, ProducerException {
         if (groupName == null || groupName.isEmpty()) {
             groupName = DEFAULT_GROUP_NAME;
         }
         for (Message message : messageList) {
-            message.setBatchId(groupName);
+            message.setGroupName(groupName);
         }
         producerBatchContainer.append(messageList, groupName);
     }

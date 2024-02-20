@@ -105,6 +105,7 @@ public class ProducerBatch implements Delayed {
         if (hasRoomFor(sizeInBytes, items.size())) {
             curBatchCount += items.size();
             curBatchSizeInBytes += sizeInBytes;
+            messageList.addAll(items);
             return true;
         }
         return false;

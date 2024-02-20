@@ -230,6 +230,7 @@ public class ProducerBatchContainer {
                 if (holder.producerBatch.isMeetSendCondition()) {
                     holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
                 }
+                return;
             } else {
                 holder.transferProducerBatch(ioThreadPool, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue);
             }

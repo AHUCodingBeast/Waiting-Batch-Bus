@@ -8,7 +8,7 @@ import java.util.Map;
  */
 public class Message {
 
-    private String batchId;
+    private String groupName;
 
     private String message;
 
@@ -36,12 +36,12 @@ public class Message {
     }
 
 
-    public String getBatchId() {
-        return batchId;
+    public String getGroupName() {
+        return groupName;
     }
 
-    public void setBatchId(String batchId) {
-        this.batchId = batchId;
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
     @Override
