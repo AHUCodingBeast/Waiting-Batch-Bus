@@ -28,7 +28,7 @@ public class QuickStartDemo {
         // producerConfig.setRetries(2); 可以指定重试次数
         MessageProducer messageProducer = getMessageProducer(producerConfig);
 
-        //模拟接收消息，进行攒批，到达攒批上限的时候会执行对应的业务逻辑
+        //模拟接收消息，进行攒批，到达攒批上限（触发攒批最大长度或者攒批总时长超过100s时）的时候会执行对应的业务逻辑
         sendMessage(messageProducer);
     }
 

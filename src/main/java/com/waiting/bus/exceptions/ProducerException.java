@@ -1,6 +1,6 @@
 package com.waiting.bus.exceptions;
 
-/** The base class of all other producer exceptions. */
+
 public class ProducerException extends Exception {
 
   public ProducerException(String message, Throwable cause) {

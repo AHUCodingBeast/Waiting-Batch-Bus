@@ -1,6 +1,5 @@
 package com.waiting.bus.exceptions;
 
-/** Indicates that a request timed out. */
 public class TimeoutException extends ProducerException {
 
   public TimeoutException() {

@@ -1,6 +1,5 @@
 package com.waiting.bus.exceptions;
 
-/** The log's size is larger than the maximum allowable size. */
 public class DataSizeTooLargeException extends ProducerException {
 
   public DataSizeTooLargeException() {
