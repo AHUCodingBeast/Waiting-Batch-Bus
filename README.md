@@ -1,4 +1,4 @@
-# WaitingBusBatch
+# WaitingBusBatch （WBB） 内存攒批工具
 
 #### 介绍
 **内存“攒批工具”** waiting-bus-batch 是一个能够支持在内存中进行多分批延迟处理的工具。
@@ -15,25 +15,16 @@
 
 
 #### 软件架构
-软件架构说明
-
+![](./架构.png)
 
 #### 安装教程
 
 1.  clone代码
-2.  xxxx
-3.  xxxx
+2.  修改pom.xml 执行 mvn clean deploy 部署到私服仓库
+3.  在代码中通过maven引入
 
 #### 使用说明
-
-1.  xxxx
-2.  xxxx
-3.  xxxx
-
-#### 参与贡献
-
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+1. 阅读QuickStartDemo.java 了解使用入门
+2. 阅读掘金专栏文章：https://juejin.cn/post/6956119978248380429 了解更多
+ 
 
