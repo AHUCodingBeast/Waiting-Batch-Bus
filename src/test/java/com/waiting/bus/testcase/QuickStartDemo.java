@@ -57,6 +57,7 @@ public class QuickStartDemo {
                     }
                     // 内存攒批
                     messageProducer.send(null, messageList);
+
                     sleep(new Random().nextInt(1000));
 
                 } catch (InterruptedException | ProducerException e) {
