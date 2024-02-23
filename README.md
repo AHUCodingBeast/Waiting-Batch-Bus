@@ -99,6 +99,6 @@ ListenableFuture<Result> listenableFuture = messageProducer.send(null, messageLi
 
 #### 使用说明
 1. 阅读QuickStartDemo.java 了解使用入门
-2. 阅读掘金专栏文章：https://juejin.cn/post/6956119978248380429 了解更多
+2. 阅读掘金专栏文章：[https://juejin.cn/post/6956119978248380429](https://juejin.cn/post/7338605981594894399)https://juejin.cn/post/7338605981594894399 了解更多
  
 
