@@ -1,5 +1,6 @@
 package com.waiting.bus.core;
 
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.waiting.bus.config.ProducerConfig;
 import com.waiting.bus.core.containers.ProducerBatch;
@@ -106,11 +107,22 @@ public class MessageProducer {
      */
     public ListenableFuture<Result> send(String groupName, List<Message> messageList, Callback callback) throws InterruptedException, ProducerException {
 
-        messageList.forEach(message -> {
+        if (groupName == null || groupName.isEmpty()) {
+            groupName = DEFAULT_GROUP_NAME;
+        }
+        for (Message message : messageList) {
             message.setGroupName(groupName);
-        });
+        }
 
         return producerBatchContainer.append(messageList, callback, groupName);
+    }
+
+    public ListenableFuture<Result> send(String groupName, Message message, Callback callback) throws InterruptedException, ProducerException {
+        if (groupName == null || groupName.isEmpty()) {
+            groupName = DEFAULT_GROUP_NAME;
+        }
+        message.setGroupName(groupName);
+        return producerBatchContainer.append(Lists.newArrayList(message), callback, groupName);
     }
 
     /**
@@ -131,6 +143,14 @@ public class MessageProducer {
         producerBatchContainer.append(messageList, groupName);
     }
 
+    public void send(String groupName, Message message) throws InterruptedException, ProducerException {
+        if (groupName == null || groupName.isEmpty()) {
+            groupName = DEFAULT_GROUP_NAME;
+        }
+        message.setGroupName(groupName);
+        producerBatchContainer.append(Lists.newArrayList(message), groupName);
+    }
+
 
     public void close() throws InterruptedException, ProducerException {
         close((long) Integer.MAX_VALUE);
@@ -142,7 +162,6 @@ public class MessageProducer {
         remainTimeoutMs = closeIOThreadPool(remainTimeoutMs);
         remainTimeoutMs = closeSuccessBatchHandler(remainTimeoutMs);
         remainTimeoutMs = closeFailureBatchHandler(remainTimeoutMs);
-
         LOGGER.warn("message producer has been gracefully closed , congratulations!, remainTimeoutMs={}", remainTimeoutMs);
 
     }

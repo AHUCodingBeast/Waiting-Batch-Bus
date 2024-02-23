@@ -1,22 +1,22 @@
 package com.waiting.bus.testcase;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.waiting.bus.config.ProducerConfig;
 import com.waiting.bus.constant.MessageProcessResultEnum;
 import com.waiting.bus.core.MessageProducer;
 import com.waiting.bus.core.models.Message;
+import com.waiting.bus.core.models.Result;
 import com.waiting.bus.exceptions.ProducerException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 /**
  * @author jianzhang
  * @date 2024/2/20
  */
-public class QuickStartDemo {
+public class QuickStartCallbackDemo {
 
     public static void main(String[] args) {
         ProducerConfig producerConfig = new ProducerConfig();
@@ -27,9 +27,7 @@ public class QuickStartDemo {
 
         // producerConfig.setRetries(2); 可以指定重试次数
         MessageProducer messageProducer = getMessageProducer(producerConfig);
-
-        //模拟接收消息，进行攒批，到达攒批上限（触发攒批最大长度或者攒批总时长超过100s时）的时候会执行对应的业务逻辑
-        sendMessage(messageProducer);
+        sendMessageWithCallBack(messageProducer);
     }
 
     private static MessageProducer getMessageProducer(ProducerConfig producerConfig) {
@@ -46,22 +44,40 @@ public class QuickStartDemo {
     }
 
 
+    private static void sendMessageWithCallBack(MessageProducer messageProducer) {
+        Thread t1 = new Thread(() -> {
+            int seq = 1;
+            while (true) {
+                try {
+                    Message msg = new Message("模拟消息-" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()), null);
+                    String appendSequenceNo = "追加攒批-当前攒批序号" + "-" + seq + "-" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now());
+                    seq++;
+                    // 内存攒批
+                    ListenableFuture<Result> listenableFuture = messageProducer.send(null, msg, (result) -> {
+                        if (result.isSuccessful()) {
+                            System.out.println( appendSequenceNo + "-消费成功");
+                        } else {
+                            System.out.println( appendSequenceNo + "-消费失败");
+                        }
+                    });
+                    // 也可以直接为 listenableFuture 绑定监听 了解每次追加的消息的消费结果
+                    sleep(new Random().nextInt(1000));
+                } catch (InterruptedException | ProducerException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+        t1.start();
+    }
 
     private static void sendMessage(MessageProducer messageProducer) {
         Thread t1 = new Thread(() -> {
             while (true) {
                 try {
-                    List<Message> messageList = new ArrayList<>();
-                    int num = new Random().nextInt(10);
-                    for (int i = 0; i < num; i++) {
-                        String message = "模拟消息-" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()) + "-" + i;
-                        messageList.add(new Message(message, null));
-                    }
-                    // 内存攒批
-                    messageProducer.send(null, messageList);
-
+                    String message = "模拟消息-" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now());
+                    Message msg = new Message(message, null);
+                    messageProducer.send(null, msg);
                     sleep(new Random().nextInt(1000));
-
                 } catch (InterruptedException | ProducerException e) {
                     throw new RuntimeException(e);
                 }

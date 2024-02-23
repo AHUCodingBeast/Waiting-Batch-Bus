@@ -49,9 +49,9 @@ public class ProducerBatch implements Delayed {
     private long nextRetryMs;
 
 
-    private String groupName;
+    private final String groupName;
 
-    private String batchId;
+    private final String batchId;
 
     /**
      * 构建一个攒批

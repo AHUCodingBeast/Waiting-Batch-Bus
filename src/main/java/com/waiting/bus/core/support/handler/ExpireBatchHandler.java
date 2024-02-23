@@ -64,7 +64,9 @@ public class ExpireBatchHandler extends Thread {
 
     @Override
     public void run() {
+        // 循环检查有无过期攒批
         loopHandleExpireBatch();
+        // 提交未完成的批次
         submitIncompleteBatches();
     }
 

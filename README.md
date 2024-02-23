@@ -76,13 +76,25 @@ public static void main(String[] args) {
 ```
 调用messageProducer的send方法以后，就会将收到的消息加入到攒批过程中，在上面的例子中当攒批队列长度达到20个元素以上或者攒批时间已经超过100s时（或者攒批队列的占据最大内存超过设定值，默认8M）就会触发攒批消费，也就是会执行创建MessageProducer 时指定的业务逻辑。
 
+此外可以支持设置“追加攒批回调”，也就是为每一次往攒批队列中追加操作设置回调函数，如下面的示例代码所示，当消息被追加到攒批队列中并被成功消费后，会执行回调函数。
+```java
+ListenableFuture<Result> listenableFuture = messageProducer.send(null, messageList, (result) -> {
+    if (result.isSuccessful()) {
+        System.out.println("执行成功 SequenceNo=" + appendSequenceNo);
+    } else {
+        System.out.println("执行失败 SequenceNo=" + appendSequenceNo);
+    }
+});
+// 也可以直接为 listenableFuture 绑定监听 了解每次追加的消息的消费结果
+```
+
 #### 软件架构
 ![](./架构.png)
 
 #### 安装教程
 1.  clone代码
 2.  修改pom.xml 执行 mvn clean deploy 部署到私服仓库
-3.  在代码中通过maven引入
+3.  在代码中通过maven坐标引入部署到仓库的jar包
 
 #### 使用说明
 1. 阅读QuickStartDemo.java 了解使用入门
