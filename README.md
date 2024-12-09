@@ -93,9 +93,17 @@ ListenableFuture<Result> listenableFuture = messageProducer.send(null, messageLi
 ![](./架构.png)
 
 #### 安装教程
-1.  clone代码
-2.  修改pom.xml 执行 mvn clean deploy 部署到私服仓库
-3.  在代码中通过maven坐标引入部署到仓库的jar包
+1、引用依赖
+``` xml
+<dependency>
+    <groupId>io.github.ahucodingbeast</groupId>
+    <artifactId>waiting-bus-batch</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+
+2、参考源码中的实例代码，使用攒批功能
 
 #### 使用说明
 1. 阅读QuickStartDemo.java 了解使用入门
