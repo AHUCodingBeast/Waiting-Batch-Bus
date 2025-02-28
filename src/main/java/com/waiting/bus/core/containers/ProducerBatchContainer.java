@@ -116,7 +116,7 @@ public class ProducerBatchContainer {
                     continue;
                 }
                 long curRemainingMs = holder.producerBatch.remainingMs(nowMs, producerConfig.getLingerMs());
-//                LOGGER.warn("groupName={} remainingMs={} createTime={}", holder.producerBatch.getGroupName(), curRemainingMs, holder.producerBatch.getCreatedMs());
+                LOGGER.warn("groupName={} remainingMs={} createTime={}", holder.producerBatch.getGroupName(), curRemainingMs, holder.producerBatch.getCreatedMs());
                 if (curRemainingMs <= 0) {
                     expireBatches.add(holder.producerBatch);
                     holder.producerBatch = null;
