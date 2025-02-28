@@ -74,7 +74,7 @@ public class ExpireBatchHandler extends Thread {
         while (!closed) {
             try {
                 List<ProducerBatch> expiredBatches1 = producerBatchContainer.getExpiredBatches();
-                List<ProducerBatch> expiredBatches2 = retryQueue.getExpiredBatches(1000);
+                List<ProducerBatch> expiredBatches2 = retryQueue.getExpiredBatches(100);
                 expiredBatches1.addAll(expiredBatches2);
                 for (ProducerBatch b : expiredBatches1) {
                     ioThreadPool.submit(new SendProducerBatchTask(b, producerConfig, messageProcessFunction, retryQueue, successQueue, failureQueue));
