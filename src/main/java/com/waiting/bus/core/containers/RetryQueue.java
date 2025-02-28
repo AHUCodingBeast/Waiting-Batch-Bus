@@ -61,6 +61,7 @@ public class RetryQueue {
                 break;
             }
             retryDelayBatchesQueue.drainTo(expiredBatches);
+            expiredBatches.add(batch);
             if (!expiredBatches.isEmpty()) {
                 break;
             }
