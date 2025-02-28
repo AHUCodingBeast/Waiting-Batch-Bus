@@ -35,7 +35,7 @@ public class BugTest {
                     + " 当前批次大小:" + arr.size());
             // do your business here
             sleep(new Random().nextInt(1000));
-            return MessageProcessResultEnum.RETRY;
+            return MessageProcessResultEnum.SUCCESS;
         });
     }
 
