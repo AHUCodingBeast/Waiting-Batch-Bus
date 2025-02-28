@@ -21,9 +21,9 @@ public class QuickStartDemo {
     public static void main(String[] args) {
         ProducerConfig producerConfig = new ProducerConfig();
         // 设定攒批达到20条以上的时候再执行业务逻辑
-        producerConfig.setBatchCountThreshold(20);
+        producerConfig.setBatchCountThreshold(40);
         // 设定攒批已经达到100s的时候再执行业务逻辑
-        producerConfig.setLingerMs(100_000);
+        producerConfig.setLingerMs(500_0);
 
         // producerConfig.setRetries(2); 可以指定重试次数
         MessageProducer messageProducer = getMessageProducer(producerConfig);
@@ -39,7 +39,7 @@ public class QuickStartDemo {
                     + " 当前批次大小:" + arr.size());
 
             // do your business here
-            sleep(new Random().nextInt(5000));
+            sleep(new Random().nextInt(1000));
 
             return MessageProcessResultEnum.SUCCESS;
         });
@@ -51,17 +51,14 @@ public class QuickStartDemo {
         Thread t1 = new Thread(() -> {
             while (true) {
                 try {
-                    List<Message> messageList = new ArrayList<>();
                     int num = new Random().nextInt(10);
                     for (int i = 0; i < num; i++) {
+                        Thread.sleep(new Random().nextInt(200));
                         String message = "模拟消息-" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()) + "-" + i;
-                        messageList.add(new Message(message, null));
+                        messageProducer.send(null, new Message(message, null));
                     }
                     // 内存攒批
-                    messageProducer.send(null, messageList);
-
                     sleep(new Random().nextInt(1000));
-
                 } catch (InterruptedException | ProducerException e) {
                     throw new RuntimeException(e);
                 }

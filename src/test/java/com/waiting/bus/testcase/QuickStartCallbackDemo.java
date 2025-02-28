@@ -21,9 +21,9 @@ public class QuickStartCallbackDemo {
     public static void main(String[] args) {
         ProducerConfig producerConfig = new ProducerConfig();
         // 设定攒批达到20条以上的时候再执行业务逻辑
-        producerConfig.setBatchCountThreshold(20);
+        producerConfig.setBatchCountThreshold(40);
         // 设定攒批已经达到100s的时候再执行业务逻辑
-        producerConfig.setLingerMs(100_000);
+        producerConfig.setLingerMs(50_00);
 
         // producerConfig.setRetries(2); 可以指定重试次数
         MessageProducer messageProducer = getMessageProducer(producerConfig);
@@ -74,9 +74,19 @@ public class QuickStartCallbackDemo {
         Thread t1 = new Thread(() -> {
             while (true) {
                 try {
-                    String message = "模拟消息-" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now());
-                    Message msg = new Message(message, null);
-                    messageProducer.send(null, msg);
+                    int num = new Random().nextInt(10);
+                    for (int i = 0; i < num; i++) {
+                        Thread.sleep(new Random().nextInt(200));
+                        String message = "模拟消息-" + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now()) + "-" + i;
+                        messageProducer.send(null, new Message(message, null),(result) -> {
+                            if (result.isSuccessful()) {
+                                System.out.println( message + "-消费成功");
+                            } else {
+                                System.out.println( message + "-消费失败");
+                            }
+                        });
+                    }
+                    // 内存攒批
                     sleep(new Random().nextInt(1000));
                 } catch (InterruptedException | ProducerException e) {
                     throw new RuntimeException(e);
