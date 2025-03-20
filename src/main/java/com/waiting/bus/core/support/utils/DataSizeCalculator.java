@@ -1,8 +1,8 @@
 package com.waiting.bus.core.support.utils;
 
 import com.waiting.bus.core.models.Message;
+import jdk.nashorn.internal.ir.debug.ObjectSizeCalculator;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -21,10 +21,9 @@ public class DataSizeCalculator {
         }
         int messagelength = 0;
         for (Message message : messageList) {
-            messagelength += message.toString().getBytes(StandardCharsets.UTF_8).length;
+            messagelength += ObjectSizeCalculator.getObjectSize(message);
         }
         return messagelength;
     }
-
 
 }

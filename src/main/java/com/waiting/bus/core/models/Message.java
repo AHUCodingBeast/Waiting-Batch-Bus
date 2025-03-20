@@ -6,32 +6,32 @@ import java.util.Map;
  * @author jianzhang
  * @date 2024/2/5
  */
-public class Message {
+public class Message<T> {
 
     private String groupName;
 
-    private String message;
+    private T message;
 
-    private Map<String,String> ext;
+    private Map<String, Object> ext;
 
-    public Message(String message, Map<String, String> ext) {
+    public Message(T message, Map<String, Object> ext) {
         this.message = message;
         this.ext = ext;
     }
 
-    public String getMessage() {
+    public T getMessage() {
         return message;
     }
 
-    public void setMessage(String message) {
+    public void setMessage(T message) {
         this.message = message;
     }
 
-    public Map<String, String> getExt() {
+    public Map<String, Object> getExt() {
         return ext;
     }
 
-    public void setExt(Map<String, String> ext) {
+    public void setExt(Map<String, Object> ext) {
         this.ext = ext;
     }
 
